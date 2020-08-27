@@ -16,7 +16,7 @@
 //!   - Optional, enabled by default
 //!   - Conversions between `ArrayDeque` and `Vec`
 //!   - Use libstd
-//! 
+//!
 //! - `use_generic_array`
 //!   - Optional
 //!   - Allow to use `GenericArray`
@@ -53,33 +53,26 @@
 //!
 //! See the [behavior module documentation](behavior/index.html) for more.
 
-#![cfg_attr(not(any(feature = "std", test)), no_std)]
 #![cfg_attr(has_union_feature, feature(untagged_unions))]
 #![deny(missing_docs)]
 
-#[cfg(not(any(feature = "std", test)))]
-extern crate core as std;
-#[cfg(feature = "use_generic_array")]
-extern crate generic_array;
-
-use std::cmp;
-use std::cmp::Ordering;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
-use std::marker;
-use std::ops::Index;
-use std::ops::IndexMut;
-use std::ptr;
+use core::cmp;
+use core::cmp::Ordering;
+use core::fmt;
+use core::hash::{Hash, Hasher};
+use core::iter::FromIterator;
+use core::marker;
+use core::ops::Index;
+use core::ops::IndexMut;
+use core::ptr;
 
 use array::Index as ArrayIndex;
 use behavior::Behavior;
-use maybe_uninit::MaybeUninit;
+use core::mem::MaybeUninit;
 
 mod array;
 pub mod behavior;
 mod error;
-mod maybe_uninit;
 mod range;
 
 pub use array::Array;
@@ -237,6 +230,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// // [3, 2, 1] -(+)-> [4, 5, 6, 7, 8, 9, _] => [3, 4, 5, 6, 7, 8, 9]
     ///
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
@@ -249,7 +243,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// buf.extend_front(vec![3, 2, 1].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![3, 4, 5, 6, 7, 8, 9].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![3, 4, 5, 6, 7, 8, 9]));
     /// ```
     #[allow(unused_must_use)]
     pub fn extend_front<I>(&mut self, iter: I)
@@ -275,6 +269,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// // [_, 1, 2, 3, 4, 5, 6] <-(+)- [7, 8, 9] => [1, 2, 3, 4, 5, 6, 7]
     ///
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
@@ -287,7 +282,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// buf.extend_back(vec![7, 8, 9].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![1, 2, 3, 4, 5, 6, 7].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![1, 2, 3, 4, 5, 6, 7]));
     /// ```
     #[allow(unused_must_use)]
     pub fn extend_back<I>(&mut self, iter: I)
@@ -432,6 +427,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// // [3, 2, 1] -(+)-> [4, 5, 6, 7, 8, 9, _] => [1, 2, 3, 4, 5, 6, 7]
     ///
     /// use arraydeque::{ArrayDeque, Wrapping};
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
@@ -444,7 +440,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// buf.extend_front(vec![3, 2, 1].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![1, 2, 3, 4, 5, 6, 7].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![1, 2, 3, 4, 5, 6, 7]));
     /// ```
     pub fn extend_front<I>(&mut self, iter: I)
     where
@@ -467,6 +463,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// // [_, 1, 2, 3, 4, 5, 6] <-(+)- [7, 8, 9] => [3, 4, 5, 6, 7, 8, 9]
     ///
     /// use arraydeque::{ArrayDeque, Wrapping};
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
@@ -479,7 +476,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// buf.extend_back(vec![7, 8, 9].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![3, 4, 5, 6, 7, 8, 9].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![3, 4, 5, 6, 7, 8, 9]));
     /// ```
     pub fn extend_back<I>(&mut self, iter: I)
     where
@@ -538,12 +535,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     fn ptr(&self) -> *const A::Item {
-        self.xs.as_ptr()
+        unsafe { core::mem::transmute(self.xs.as_ptr()) }
     }
 
     #[inline]
     fn ptr_mut(&mut self) -> *mut A::Item {
-        self.xs.as_mut_ptr()
+        unsafe { core::mem::transmute(self.xs.as_mut_ptr()) }
     }
 
     #[inline]
@@ -1015,13 +1012,11 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn new() -> ArrayDeque<A, B> {
-        unsafe {
-            ArrayDeque {
-                xs: MaybeUninit::uninitialized(),
-                tail: ArrayIndex::from(0),
-                len: ArrayIndex::from(0),
-                marker: marker::PhantomData,
-            }
+        ArrayDeque {
+            xs: MaybeUninit::uninit(),
+            tail: ArrayIndex::from(0),
+            len: ArrayIndex::from(0),
+            marker: marker::PhantomData,
         }
     }
 
@@ -1296,7 +1291,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         Iter {
             tail: self.tail(),
             len: self.len(),
-            ring: self.xs.as_slice(),
+            ring: unsafe { (*self.xs.as_ptr()).as_slice() },
         }
     }
 
@@ -1322,7 +1317,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         IterMut {
             tail: self.tail(),
             len: self.len(),
-            ring: self.xs.as_mut_slice(),
+            ring: unsafe { (*self.xs.as_mut_ptr()).as_mut_slice() },
         }
     }
 
@@ -1464,7 +1459,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             iter: Iter {
                 tail: drain_tail,
                 len: drain_len,
-                ring: self.xs.as_mut_slice(),
+                ring: unsafe { (*self.xs.as_mut_ptr()).as_mut_slice() },
             },
         }
     }
@@ -1481,6 +1476,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
@@ -1490,7 +1486,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// buf.swap(0, 2);
     ///
-    /// assert_eq!(buf, vec![2, 1, 0].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![2, 1, 0]));
     /// ```
     #[inline]
     pub fn swap(&mut self, i: usize, j: usize) {
@@ -1519,6 +1515,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     /// assert_eq!(buf.swap_remove_back(0), None);
@@ -1528,7 +1525,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.swap_remove_back(0), Some(0));
-    /// assert_eq!(buf, vec![2, 1].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![2, 1]));
     /// ```
     pub fn swap_remove_back(&mut self, index: usize) -> Option<A::Item> {
         let length = self.len();
@@ -1553,6 +1550,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     /// assert_eq!(buf.swap_remove_back(0), None);
@@ -1562,7 +1560,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.swap_remove_front(2), Some(2));
-    /// assert_eq!(buf, vec![1, 0].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![1, 0]));
     /// ```
     pub fn swap_remove_front(&mut self, index: usize) -> Option<A::Item> {
         let length = self.len();
@@ -1585,6 +1583,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
@@ -1593,7 +1592,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.remove(1), Some(1));
-    /// assert_eq!(buf, vec![0, 2].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![0, 2]));
     /// ```
     pub fn remove(&mut self, index: usize) -> Option<A::Item> {
         if self.is_empty() || self.len() <= index {
@@ -1850,13 +1849,14 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
+    /// use std::iter::FromIterator;
     ///
     /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
     ///
     /// buf.extend_back(0..4);
     /// buf.retain(|&x| x % 2 == 0);
     ///
-    /// assert_eq!(buf, vec![0, 2].into());
+    /// assert_eq!(buf, ArrayDeque::from_iter(vec![0, 2]));
     /// ```
     pub fn retain<F>(&mut self, mut f: F)
     where
@@ -1929,7 +1929,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let contiguous = self.is_contiguous();
         let head = self.head();
         let tail = self.tail();
-        let buf = self.xs.as_mut_slice();
+        let buf = unsafe { (*self.xs.as_mut_ptr()).as_mut_slice() };
 
         if contiguous {
             let (empty, buf) = buf.split_at_mut(0);
@@ -2074,7 +2074,8 @@ impl<A: Array, B: Behavior> Index<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            }).unwrap()
+            })
+            .unwrap()
     }
 }
 
@@ -2088,7 +2089,8 @@ impl<A: Array, B: Behavior> IndexMut<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            }).unwrap()
+            })
+            .unwrap()
     }
 }
 
@@ -2357,7 +2359,8 @@ where
     A: Array,
     A::Item: 'a,
     B: Behavior,
-{}
+{
+}
 
 #[cfg(test)]
 mod tests {
@@ -2596,7 +2599,7 @@ mod tests {
                     let drains: Vec<_> = tester.drain(drain_start..drain_end).collect();
                     let expected_drains: Vec<_> = expected.drain(drain_start..drain_end).collect();
                     assert_eq!(drains, expected_drains);
-                    assert_eq!(tester, expected.into());
+                    assert_eq!(tester, ArrayDeque::from_iter(expected));
                 }
             }
         }
@@ -2604,7 +2607,7 @@ mod tests {
 
     #[test]
     fn test_drop() {
-        use std::cell::Cell;
+        use core::cell::Cell;
 
         let flag = &Cell::new(0);
 
@@ -2873,11 +2876,11 @@ mod tests {
     fn test_from_iterator_saturating() {
         assert_eq!(
             ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3]),
-            vec![1, 2, 3].into()
+            ArrayDeque::from_iter(vec![1, 2, 3])
         );
         assert_eq!(
             ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3, 4, 5]),
-            vec![1, 2, 3].into()
+            ArrayDeque::from_iter(vec![1, 2, 3])
         );
     }
 
@@ -2885,11 +2888,11 @@ mod tests {
     fn test_from_iterator_wrapping() {
         assert_eq!(
             ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3]),
-            vec![1, 2, 3].into()
+            ArrayDeque::from_iter(vec![1, 2, 3])
         );
         assert_eq!(
             ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3, 4, 5]),
-            vec![3, 4, 5].into()
+            ArrayDeque::from_iter(vec![3, 4, 5])
         );
     }
 
@@ -2897,35 +2900,35 @@ mod tests {
     fn test_extend_front_saturating() {
         let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
         tester.extend_front(vec![1, 2, 3]);
-        assert_eq!(tester, vec![3, 2, 1].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![3, 2, 1]));
         tester.extend_front(vec![4, 5]);
-        assert_eq!(tester, vec![3, 2, 1].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![3, 2, 1]));
     }
 
     #[test]
     fn test_extend_back_saturating() {
         let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
         tester.extend_back(vec![1, 2, 3]);
-        assert_eq!(tester, vec![1, 2, 3].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![1, 2, 3]));
         tester.extend_back(vec![4, 5]);
-        assert_eq!(tester, vec![1, 2, 3].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![1, 2, 3]));
     }
 
     #[test]
     fn test_extend_front_wrapping() {
         let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
         tester.extend_front(vec![1, 2, 3]);
-        assert_eq!(tester, vec![3, 2, 1].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![3, 2, 1]));
         tester.extend_front(vec![4, 5]);
-        assert_eq!(tester, vec![5, 4, 3].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![5, 4, 3]));
     }
 
     #[test]
     fn test_extend_back_wrapping() {
         let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
         tester.extend_back(vec![1, 2, 3]);
-        assert_eq!(tester, vec![1, 2, 3].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![1, 2, 3]));
         tester.extend_back(vec![4, 5]);
-        assert_eq!(tester, vec![3, 4, 5].into());
+        assert_eq!(tester, ArrayDeque::from_iter(vec![3, 4, 5]));
     }
 }

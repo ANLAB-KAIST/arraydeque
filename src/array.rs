@@ -38,7 +38,7 @@ pub unsafe trait Array {
 #[doc(hidden)]
 pub trait Index: PartialEq + Copy {
     fn to_usize(self) -> usize;
-    fn from(usize) -> Self;
+    fn from(_: usize) -> Self;
 }
 
 impl Index for u8 {
@@ -93,19 +93,19 @@ macro_rules! fix_array_impl {
     ($index_type:ty, $len:expr) => {
         unsafe impl<T> Array for [T; $len] {
             type Item = T;
-        
+
             type Index = $index_type;
-        
+
             #[inline(always)]
             fn as_ptr(&self) -> *const T {
                 self as *const _ as *const T
             }
-        
+
             #[inline(always)]
             fn as_mut_ptr(&mut self) -> *mut T {
                 self as *mut _ as *mut T
             }
-        
+
             #[inline(always)]
             fn capacity() -> usize {
                 $len
@@ -133,42 +133,38 @@ fix_array_impl_recursive!(u16, 256, 384, 512, 768, 1024, 2048, 4096, 8192, 16384
 #[cfg(any(target_pointer_width = "32", target_pointer_width = "64"))]
 fix_array_impl_recursive!(u32, 1 << 16,);
 
-#[cfg(feature = "use_generic_array")]
-mod generic_impl {
-    use super::Array;
-    use generic_array::{ArrayLength, GenericArray};
+use generic_array::{ArrayLength, GenericArray};
 
-    unsafe impl<T, N> Array for GenericArray<T, N>
-    where
-        N: ArrayLength<T>,
-    {
-        type Item = T;
+unsafe impl<T, N> Array for GenericArray<T, N>
+where
+    N: ArrayLength<T>,
+{
+    type Item = T;
 
-        type Index = usize;
+    type Index = usize;
 
-        #[inline(always)]
-        fn as_ptr(&self) -> *const Self::Item {
-            self.as_slice().as_ptr()
-        }
+    #[inline(always)]
+    fn as_ptr(&self) -> *const Self::Item {
+        self.as_slice().as_ptr()
+    }
 
-        #[inline(always)]
-        fn as_mut_ptr(&mut self) -> *mut Self::Item {
-            self.as_mut_slice().as_mut_ptr()
-        }
+    #[inline(always)]
+    fn as_mut_ptr(&mut self) -> *mut Self::Item {
+        self.as_mut_slice().as_mut_ptr()
+    }
 
-        #[inline(always)]
-        fn capacity() -> usize {
-            N::to_usize()
-        }
+    #[inline(always)]
+    fn capacity() -> usize {
+        N::to_usize()
+    }
 
-        #[inline(always)]
-        fn as_slice(&self) -> &[Self::Item] {
-            GenericArray::as_slice(self)
-        }
+    #[inline(always)]
+    fn as_slice(&self) -> &[Self::Item] {
+        GenericArray::as_slice(self)
+    }
 
-        #[inline(always)]
-        fn as_mut_slice(&mut self) -> &mut [Self::Item] {
-            GenericArray::as_mut_slice(self)
-        }
+    #[inline(always)]
+    fn as_mut_slice(&mut self) -> &mut [Self::Item] {
+        GenericArray::as_mut_slice(self)
     }
 }
